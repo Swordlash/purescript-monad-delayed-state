@@ -102,3 +102,17 @@ let upstream =
       https://github.com/purescript/package-sets/releases/download/psc-0.14.4-20211005/packages.dhall sha256:2ec351f17be14b3f6421fbba36f4f01d1681e5c7f46e0c981465c4cf222de5be
 
 in  upstream
+  with monad-unlift =
+    { dependencies =
+      [ "aff"
+      , "console"
+      , "effect"
+      , "prelude"
+      , "psci-support"
+      , "transformers" 
+      ]
+    , repo =
+      "https://github.com/Swordlash/purescript-monad-unlift.git"
+    , version = 
+      "2c034bf12b89a24322bdd667306b710d4390fd4b"
+    }

@@ -18,7 +18,6 @@ import Effect.Aff (Aff, Fiber, Milliseconds(..), delay, forkAff, launchAff_)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Class.Console (log, logShow)
 import Test.Assert (assert')
 
 ---------------------------------------------------------------

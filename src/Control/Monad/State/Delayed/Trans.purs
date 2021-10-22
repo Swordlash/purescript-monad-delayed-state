@@ -1,11 +1,12 @@
 module Control.Monad.State.Delayed.Trans 
   ( DelayedStateT (..)
   , runDelayedStateT
-  , Delayer
-  , DelayerState 
   ) where
 
 import Prelude
+import Effect.Aff.Unlift (class MonadUnliftAff)
+import Effect.Unlift (class MonadUnliftEffect)
+import Control.Monad.State.Delayed.Delayer (Delayer(..), mkEmptyDelayerState, mkTimedOutDelayerState)
 
 import Control.Monad.Base (class MonadBase, liftBase)
 import Control.Monad.Reader (class MonadTrans, ReaderT(..), runReaderT)
@@ -17,33 +18,11 @@ import Data.Identity (Identity(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..))
-import Effect.AVar (AVar)
-import Effect.Aff (Aff, Fiber, Milliseconds, delay, error, forkAff, killFiber)
+import Effect.Aff (Aff, Milliseconds, error, killFiber)
 import Effect.Aff.AVar as AAVar
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
 import Unsafe.Reference (unsafeRefEq)
-
----------------------------------------------------------------------
-
-data Delayer s = Delayer Milliseconds (AVar (Maybe (DelayerState s)))
-
-type DelayerState s =
-  { delayedState :: s
-  , commitFiber  :: Fiber Unit
-  }
-
-mkEmptyDelayerState :: forall s. Milliseconds -> Aff (Delayer s)
-mkEmptyDelayerState millis = Delayer millis <$> AAVar.new Nothing
-
-mkTimedOutDelayerState :: forall s. Milliseconds -> s -> (s -> Aff Unit) -> Aff (DelayerState s)
-mkTimedOutDelayerState millis delayedState commitState = do
-  commitFiber <- forkAff do
-    delay millis
-    commitState delayedState
-  pure { delayedState, commitFiber }
-
----------------------------------------------------------------------
 
 newtype DelayedStateT :: Type -> (Type -> Type) -> Type -> Type
 newtype DelayedStateT s m a = DelayedStateT (ReaderT (Delayer s) m a)
@@ -63,6 +42,8 @@ derive newtype instance Monad m => Monad (DelayedStateT s m)
 derive newtype instance MonadEffect m => MonadEffect (DelayedStateT s m)
 derive newtype instance MonadAff m => MonadAff (DelayedStateT s m)
 derive newtype instance MonadBase b m => MonadBase b (DelayedStateT s m)
+derive newtype instance MonadUnliftAff m => MonadUnliftAff (DelayedStateT s m)
+derive newtype instance MonadUnliftEffect m => MonadUnliftEffect (DelayedStateT s m)
 
 instance Monad m => MonadTransControl m (DelayedStateT s) Identity where
   liftWith f = DelayedStateT $ ReaderT $ \r -> f \(DelayedStateT (ReaderT g)) -> Identity <$> g r
@@ -99,5 +80,3 @@ instance (MonadBaseControl Aff m stM, MonadState s m) => DelayedState s (Delayed
                 \runInBase -> mkTimedOutDelayerState timeout newState 
                   \s -> runInBase (put s) *> replaceAVar Nothing delayerStateVar
             liftBase $ AAVar.put (Just newDelayerState) delayerStateVar
-        
-
