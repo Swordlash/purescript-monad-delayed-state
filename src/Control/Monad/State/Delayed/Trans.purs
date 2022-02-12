@@ -4,8 +4,6 @@ module Control.Monad.State.Delayed.Trans
   ) where
 
 import Prelude
-import Effect.Aff.Unlift (class MonadUnliftAff)
-import Effect.Unlift (class MonadUnliftEffect)
 import Control.Monad.State.Delayed.Delayer (Delayer(..), mkEmptyDelayerState, mkTimedOutDelayerState)
 
 import Control.Monad.Base (class MonadBase, liftBase)
@@ -42,8 +40,6 @@ derive newtype instance Monad m => Monad (DelayedStateT s m)
 derive newtype instance MonadEffect m => MonadEffect (DelayedStateT s m)
 derive newtype instance MonadAff m => MonadAff (DelayedStateT s m)
 derive newtype instance MonadBase b m => MonadBase b (DelayedStateT s m)
-derive newtype instance MonadUnliftAff m => MonadUnliftAff (DelayedStateT s m)
-derive newtype instance MonadUnliftEffect m => MonadUnliftEffect (DelayedStateT s m)
 
 instance Monad m => MonadTransControl m (DelayedStateT s) Identity where
   liftWith f = DelayedStateT $ ReaderT $ \r -> f \(DelayedStateT (ReaderT g)) -> Identity <$> g r
