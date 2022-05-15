@@ -4,13 +4,14 @@ module Control.Monad.State.Delayed.Trans
   ) where
 
 import Prelude
-import Control.Monad.State.Delayed.Delayer (Delayer(..), mkEmptyDelayerState, mkTimedOutDelayerState)
 
 import Control.Monad.Base (class MonadBase, liftBase)
 import Control.Monad.Reader (class MonadTrans, ReaderT(..), runReaderT)
 import Control.Monad.State (class MonadState, get, put)
 import Control.Monad.State.Delayed.Class (class DelayedState)
+import Control.Monad.State.Delayed.Delayer (Delayer(..), mkEmptyDelayerState, mkTimedOutDelayerState)
 import Control.Monad.Trans.Control (class MonadBaseControl, class MonadTransControl, defaultLiftBaseWith, defaultRestoreM, liftBaseWith, restoreT)
+import Data.Foldable (traverse_)
 import Data.Functor.Compose (Compose)
 import Data.Identity (Identity(..))
 import Data.Maybe (Maybe(..))
@@ -50,6 +51,13 @@ instance (MonadBaseControl base m stM, Monad m, Monad base) => MonadBaseControl 
   restoreM = defaultRestoreM
 
 instance (MonadBaseControl Aff m stM, MonadState s m) => DelayedState s (DelayedStateT s m) where
+  commit = DelayedStateT $ ReaderT $ \(Delayer timeout delayerStateVar) -> go timeout delayerStateVar
+    where
+      go _ delayerStateVar = 
+        liftBase (AAVar.take delayerStateVar) >>= traverse_ \{ delayedState, commitFiber } -> do
+          liftBase $ killFiber (error "killed") commitFiber
+          put delayedState
+
   state f = DelayedStateT $ ReaderT $ \(Delayer timeout delayerStateVar) -> go timeout delayerStateVar
     where
       go timeout delayerStateVar = do

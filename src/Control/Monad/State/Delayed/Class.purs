@@ -1,6 +1,7 @@
 module Control.Monad.State.Delayed.Class
   ( class DelayedState
   , state
+  , commit
   , get
   , gets
   , put
@@ -15,6 +16,7 @@ import Data.Tuple (Tuple(..))
 -- | Typeclass for a delayed state monad
 class Monad m <= DelayedState s m | m -> s where
    state :: forall a. (s -> Tuple a s) -> m a
+   commit :: m Unit
 
 -- | Get the current state.
 get :: forall m s. DelayedState s m => m s
